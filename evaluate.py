@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 
 from openai import OpenAI
 
@@ -56,6 +57,21 @@ def make_client() -> OpenAI:
     return OpenAI(api_key=api_key, base_url="https://api.deepseek.com")
 
 
+def _call_once(client: OpenAI, model: str, user_text: str, nudge: str = "") -> str:
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": user_text + nudge},
+    ]
+    response = client.chat.completions.create(
+        model=model,
+        max_tokens=2000,
+        temperature=0.3,
+        messages=messages,
+        response_format={"type": "json_object"},
+    )
+    return response.choices[0].message.content or ""
+
+
 def evaluate_paper(
     client: OpenAI,
     title: str,
@@ -63,6 +79,7 @@ def evaluate_paper(
     authors: list[str] | None = None,
     first_page_text: str = "",
     model: str = DEFAULT_MODEL,
+    max_retries: int = 3,
 ) -> dict:
     author_line = ", ".join(authors[:8]) if authors else "(未知)"
     fp_block = first_page_text.strip() if first_page_text else "(首页文本未获取)"
@@ -73,26 +90,38 @@ def evaluate_paper(
         f"摘要: {abstract}\n\n"
         f"---\nfirst_page_text:\n{fp_block}"
     )
-    response = client.chat.completions.create(
-        model=model,
-        max_tokens=2000,
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": user_text},
-        ],
-        response_format={"type": "json_object"},
-    )
-    content = response.choices[0].message.content
-    if not content:
-        raise ValueError("DeepSeek returned empty content")
-    data = json.loads(content)
-    missing = REQUIRED_KEYS - data.keys()
-    if missing:
-        raise ValueError(f"Missing keys in response: {missing}")
-    for k in ("novelty", "practicality", "rigor", "relevance"):
-        v = data[k]
-        if not isinstance(v, int) or not 1 <= v <= 10:
-            data[k] = max(1, min(10, int(v)))
-    if not isinstance(data["affiliations"], list):
-        data["affiliations"] = []
-    return data
+
+    last_err: str | None = None
+    for attempt in range(max_retries):
+        nudge = (
+            "\n\n（上一次返回为空或不合法，请直接输出包含全部 7 个字段的 json 对象，不要 markdown 代码块、不要解释。）"
+            if attempt > 0
+            else ""
+        )
+        try:
+            content = _call_once(client, model, user_text, nudge)
+            if not content.strip():
+                last_err = "empty content"
+                time.sleep(1.0)
+                continue
+            data = json.loads(content)
+            missing = REQUIRED_KEYS - data.keys()
+            if missing:
+                last_err = f"missing keys: {missing}"
+                time.sleep(1.0)
+                continue
+            for k in ("novelty", "practicality", "rigor", "relevance"):
+                v = data[k]
+                if not isinstance(v, int) or not 1 <= v <= 10:
+                    data[k] = max(1, min(10, int(v)))
+            if not isinstance(data["affiliations"], list):
+                data["affiliations"] = []
+            return data
+        except json.JSONDecodeError as e:
+            last_err = f"json decode: {e}"
+            time.sleep(1.0)
+        except Exception as e:
+            last_err = f"{type(e).__name__}: {e}"
+            time.sleep(1.0)
+
+    raise ValueError(f"DeepSeek failed after {max_retries} attempts ({last_err})")

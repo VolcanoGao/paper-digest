@@ -113,6 +113,6 @@ paper-digest/
 
 ## 已知限制
 
-- DeepSeek 的 `json_object` 模式偶尔会返回空内容，目前直接抛异常跳过；上线前可加自动重试
+- DeepSeek 的 `json_object` 模式偶尔会返回空内容或缺字段，已加 3 次重试（`evaluate.py` 里 `max_retries`），仍失败的论文会跳过并继续
 - 每篇候选会下载一次 PDF（~1MB），20 篇约 30s 网络耗时
 - arXiv 周末不出新，每周一会发现 2 天的论文，正常现象

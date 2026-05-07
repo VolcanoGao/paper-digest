@@ -6,7 +6,7 @@ from evaluate import evaluate_paper, make_client
 from fetch import download_first_page_text, fetch_recent_papers
 from render import render_markdown
 
-TOP_N = 5
+TOP_N = 10
 MAX_FETCH = 80
 LOOKBACK_DAYS = 3
 WEIGHTS = {
@@ -31,7 +31,8 @@ def main() -> int:
 
     print(f"[2/3] Fetching PDF first pages and evaluating with DeepSeek...")
     client = make_client()
-    scored = []
+    scored: list[dict] = []
+    failed: list[dict] = []
     for i, paper in enumerate(papers, 1):
         title_short = paper["title"][:70]
         print(f"      [{i}/{len(papers)}] {title_short}")
@@ -50,19 +51,25 @@ def main() -> int:
             scored.append(paper)
         except Exception as exc:
             print(f"        ! evaluation failed: {exc}")
+            paper["fail_reason"] = str(exc)
+            failed.append(paper)
 
-    if not scored:
-        print("All evaluations failed.")
+    if not scored and not failed:
+        print("Nothing to render.")
         return 1
 
     scored.sort(key=lambda p: p["score"], reverse=True)
     top = scored[:TOP_N]
+    rest = scored[TOP_N:]
 
-    print(f"[3/3] Rendering top {len(top)} to markdown...")
+    print(
+        f"[3/3] Rendering: {len(top)} top, {len(rest)} ranked-but-not-interpreted, "
+        f"{len(failed)} failed..."
+    )
     output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "output")
     os.makedirs(output_dir, exist_ok=True)
     output_path = os.path.join(output_dir, f"{date.today().isoformat()}.md")
-    render_markdown(top, output_path)
+    render_markdown(top, output_path, rest=rest, failed=failed)
     print(f"      Wrote {output_path}")
     return 0
 
