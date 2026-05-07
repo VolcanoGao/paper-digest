@@ -61,23 +61,11 @@ def render_markdown(
 
     if rest or failed:
         lines += ["## 其他论文（本次检索到但未做解读）", ""]
-
-        if rest:
-            lines += [f"### 排名靠后 ({len(rest)} 篇)", ""]
-            for paper in rest:
-                lines.append(
-                    f"- [{paper['title']}]({paper['url']}) — 综合分 {paper['score']:.2f}"
-                )
-            lines.append("")
-
-        if failed:
-            lines += [f"### 评估失败 ({len(failed)} 篇)", ""]
-            for paper in failed:
-                reason = paper.get("fail_reason", "unknown")
-                lines.append(
-                    f"- [{paper['title']}]({paper['url']}) — {reason}"
-                )
-            lines.append("")
+        for paper in rest:
+            lines.append(f"- [{paper['title']}]({paper['url']})")
+        for paper in failed:
+            lines.append(f"- [{paper['title']}]({paper['url']})")
+        lines.append("")
 
     with open(output_path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
