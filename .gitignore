@@ -7,9 +7,6 @@ venv/
 env/
 *.egg-info/
 
-# Output
-output/
-
 # IDE
 .vscode/
 .idea/

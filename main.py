@@ -3,7 +3,7 @@ import sys
 from datetime import date
 
 from evaluate import evaluate_paper, make_client
-from fetch import fetch_recent_papers
+from fetch import download_first_page_text, fetch_recent_papers
 from render import render_markdown
 
 TOP_N = 5
@@ -29,18 +29,22 @@ def main() -> int:
         print("No papers to evaluate. Exiting.")
         return 0
 
-    print(f"[2/3] Evaluating with DeepSeek...")
+    print(f"[2/3] Fetching PDF first pages and evaluating with DeepSeek...")
     client = make_client()
     scored = []
     for i, paper in enumerate(papers, 1):
         title_short = paper["title"][:70]
         print(f"      [{i}/{len(papers)}] {title_short}")
+        first_page = download_first_page_text(paper["pdf_url"])
+        if not first_page:
+            print(f"        ~ first-page text unavailable, affiliations may be empty")
         try:
             paper["evaluation"] = evaluate_paper(
                 client,
                 paper["title"],
                 paper["abstract"],
                 authors=paper["authors"],
+                first_page_text=first_page,
             )
             paper["score"] = composite_score(paper["evaluation"])
             scored.append(paper)
