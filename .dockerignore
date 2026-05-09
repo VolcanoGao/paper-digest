@@ -1,0 +1,33 @@
+# Local dev artifacts that shouldn't ship to the image
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+
+# Secrets & local config
+.env
+.env.local
+
+# Git/IDE
+.git/
+.gitignore
+.vscode/
+.idea/
+.DS_Store
+
+# Local CLI scripts not needed in prod
+output/
+fetch.py
+evaluate.py
+main.py
+render.py
+
+# Docs / runbooks
+README.md
+*.md
+
+# OS
+Thumbs.db

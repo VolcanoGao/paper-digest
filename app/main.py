@@ -22,9 +22,29 @@ logging.basicConfig(
 log = logging.getLogger("app")
 
 
+def _check_prod_invariants() -> None:
+    """Refuse to start in prod with placeholder secrets. Catching this at boot
+    is much cheaper than discovering it via a security incident later."""
+    if settings.app_env != "prod":
+        return
+    problems = []
+    if not settings.secret_key or settings.secret_key in {"change-me", "change-me-to-a-random-string"}:
+        problems.append("SECRET_KEY is empty or placeholder")
+    if not settings.fernet_key:
+        problems.append("FERNET_KEY is empty (would generate a transient key — encrypted data wouldn't survive restarts)")
+    if not settings.deepseek_api_key:
+        problems.append("DEEPSEEK_API_KEY is empty (platform pipeline would fail)")
+    if not settings.base_url or settings.base_url.startswith("http://127.0.0.1"):
+        problems.append("BASE_URL still points at localhost; emails would have broken unsubscribe links")
+    if problems:
+        msg = "Refusing to start in prod with bad config:\n  - " + "\n  - ".join(problems)
+        raise RuntimeError(msg)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     log.info("App starting; env=%s", settings.app_env)
+    _check_prod_invariants()
     start_scheduler()
     try:
         yield

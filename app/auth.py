@@ -84,7 +84,9 @@ async def get_user_manager(
 cookie_transport = CookieTransport(
     cookie_name=COOKIE_NAME,
     cookie_max_age=COOKIE_LIFETIME,
-    cookie_secure=False,  # set True in prod (HTTPS only)
+    # In prod (Fly serves over HTTPS) require Secure. Locally we'd lock ourselves
+    # out of HTTP-only dev otherwise.
+    cookie_secure=(settings.app_env == "prod"),
     cookie_httponly=True,
     cookie_samesite="lax",
 )

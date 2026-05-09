@@ -1,0 +1,46 @@
+# Fly.io app config. Replace `paper-digest` with the app name `fly launch` picks.
+# Region "hkg" (Hong Kong) is closest for mainland China users; switch to "nrt"
+# (Tokyo) or "sjc" if you reach a different audience.
+
+app = "paper-digest"
+primary_region = "hkg"
+
+# Run alembic migrations once per deploy, before the new release goes live.
+# If the migration fails, the deploy aborts and the previous version keeps serving.
+[deploy]
+  release_command = "alembic upgrade head"
+
+[build]
+
+[env]
+  APP_ENV = "prod"
+  PORT = "8080"
+  PROMPT_VERSION = "v1"
+  LOOKBACK_DAYS = "3"
+  MAX_FETCH_PER_CATEGORY = "120"
+  # BASE_URL set via `fly secrets set BASE_URL=https://<app>.fly.dev` after first deploy.
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  # APScheduler runs in-process; the machine MUST stay up to fire daily/per-minute
+  # cron jobs. Auto-stop would silently break scheduling.
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+  [[http_service.checks]]
+    grace_period = "10s"
+    interval = "30s"
+    method = "GET"
+    timeout = "5s"
+    path = "/healthz"
+
+[[vm]]
+  # Pipeline run downloads PDFs and holds 100+ papers in memory briefly; 256MB
+  # is too tight, 1GB is wasteful. 512MB is the sweet spot.
+  size = "shared-cpu-1x"
+  memory = "512mb"
+  cpu_kind = "shared"
+  cpus = 1
