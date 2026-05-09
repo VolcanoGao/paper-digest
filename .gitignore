@@ -18,3 +18,8 @@ Thumbs.db
 
 # Secrets
 .env
+.env.local
+
+# Alembic/SQLite scratch
+*.sqlite
+*.sqlite3

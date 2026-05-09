@@ -1,3 +1,32 @@
-openai>=1.50.0
+# Web framework
+fastapi>=0.115
+uvicorn[standard]>=0.32
+jinja2>=3.1
+python-multipart>=0.0.12
+
+# DB
+sqlalchemy>=2.0
+psycopg[binary]>=3.2
+alembic>=1.13
+
+# Scheduling
+apscheduler>=3.10
+
+# arXiv + PDF (existing pipeline)
 arxiv>=2.1.0
 pypdf>=4.0
+
+# LLM client
+openai>=1.50.0
+
+# Auth (Phase 2)
+fastapi-users[sqlalchemy]>=14.0
+
+# Crypto for stored DeepSeek keys
+cryptography>=43
+
+# Email (Phase 4)
+httpx>=0.27
+
+# Config
+pydantic-settings>=2.5
