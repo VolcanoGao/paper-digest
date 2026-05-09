@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Paper Digest · {{ today }}</title>
+</head>
+<body style="margin:0;padding:0;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hiragino Sans GB',sans-serif;color:#0f172a;">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f8fafc;padding:24px 0;">
+  <tr><td align="center">
+    <table role="presentation" width="640" cellspacing="0" cellpadding="0" border="0"
+           style="max-width:640px;background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;">
+      <tr><td style="padding:20px 24px;border-bottom:1px solid #e2e8f0;">
+        <div style="font-size:11px;color:#64748b;letter-spacing:0.05em;text-transform:uppercase;">
+          Paper Digest · {{ today }}
+        </div>
+        <h1 style="margin:6px 0 0 0;font-size:20px;color:#0f172a;">{{ config_name }}</h1>
+        <div style="margin-top:6px;font-size:12px;color:#64748b;">
+          今日命中 {{ hits | length }} 篇{% if hits | length == 0 %}（最近 3 天没有匹配关键词的论文）{% endif %}
+        </div>
+      </td></tr>
+
+      {% for hit in hits %}
+        <tr><td style="padding:20px 24px;border-bottom:1px solid #f1f5f9;">
+          <div style="font-size:11px;color:#94a3b8;font-family:ui-monospace,monospace;">#{{ loop.index }}</div>
+          <div style="margin-top:2px;font-size:15px;font-weight:600;color:#0f172a;line-height:1.4;">
+            {{ hit.title }}
+          </div>
+          <div style="margin-top:6px;font-size:11px;color:#64748b;">
+            {% set authors = hit.authors[:5] %}
+            {{ authors | join(', ') }}{% if hit.authors | length > 5 %} et al.{% endif %}
+            {% if hit.affiliations %}
+              · <span style="color:#334155;">{{ hit.affiliations | join(' / ') }}</span>
+            {% endif %}
+            · <a href="{{ hit.url }}" style="color:#0f172a;">arXiv</a>
+            · <a href="{{ hit.pdf_url }}" style="color:#0f172a;">PDF</a>
+          </div>
+          <div style="margin-top:8px;font-size:11px;color:#475569;">
+            <span style="display:inline-block;background:#0f172a;color:#fff;font-family:ui-monospace,monospace;padding:2px 6px;border-radius:3px;">综合 {{ '%.2f' % hit.composite }}</span>
+            &nbsp; 创新 {{ hit.novelty }} · 实用 {{ hit.practicality }} · 严谨 {{ hit.rigor }} · 相关 {{ hit.relevance }}
+          </div>
+          {% if hit.keywords %}
+            <div style="margin-top:6px;font-size:11px;color:#64748b;">
+              {% for kw in hit.keywords %}
+                <span style="display:inline-block;background:#f1f5f9;color:#334155;border:1px solid #e2e8f0;padding:1px 6px;border-radius:9999px;margin-right:4px;margin-bottom:2px;">{{ kw }}</span>
+              {% endfor %}
+            </div>
+          {% endif %}
+          {% if hit.summary_zh %}
+            <p style="margin:10px 0 0 0;font-size:13px;color:#334155;line-height:1.55;">{{ hit.summary_zh }}</p>
+          {% endif %}
+        </td></tr>
+      {% endfor %}
+
+      <tr><td style="padding:16px 24px;background:#f8fafc;border-top:1px solid #e2e8f0;color:#64748b;font-size:11px;">
+        来自 Paper Digest · 你订阅了 <strong style="color:#334155;">{{ config_name }}</strong>，每天 {{ send_at_local }} ({{ tz }}) 推送。
+        <br>
+        <a href="{{ unsubscribe_url }}" style="color:#64748b;text-decoration:underline;">退订</a>
+        ·
+        <a href="{{ base_url }}/settings" style="color:#64748b;text-decoration:underline;">管理订阅</a>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body>
+</html>

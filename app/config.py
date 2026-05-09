@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     # Email
     resend_api_key: str = ""
     mail_from: str = "digest@example.com"
+    # Used to build absolute URLs in outgoing emails (unsubscribe link).
+    base_url: str = "http://127.0.0.1:8000"
 
 
 settings = Settings()

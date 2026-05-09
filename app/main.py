@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
 from fastapi.concurrency import run_in_threadpool
+from fastapi.responses import HTMLResponse
 
 from app.auth import auth_backend, fastapi_users
 from app.config import ARXIV_CATEGORIES, PLATFORM_KEYWORDS, settings
@@ -85,3 +86,66 @@ async def admin_run_now() -> dict:
         raise HTTPException(status_code=403, detail="disabled in prod")
     stats = await run_in_threadpool(run_platform_pipeline)
     return stats
+
+
+@app.post("/admin/send-digest-now")
+async def admin_send_digest_now() -> list[dict]:
+    """Force-fire the digest sweep for all active subs, ignoring time-of-day
+    and last_sent_on. Dev-only — for testing email rendering and delivery."""
+    if settings.app_env == "prod":
+        raise HTTPException(status_code=403, detail="disabled in prod")
+    from app.jobs.send_digests import run_digest_sweep
+    return await run_digest_sweep(force=True)
+
+
+@app.get("/admin/preview-digest", response_class=HTMLResponse)
+async def admin_preview_digest(sub_id: str | None = None):
+    """Render the email HTML for a subscription so you can see it in a browser.
+    Pass ?sub_id=<uuid> or omits to grab the first active subscription."""
+    if settings.app_env == "prod":
+        raise HTTPException(status_code=403, detail="disabled in prod")
+
+    import uuid as _uuid
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    from sqlalchemy import select
+    from sqlalchemy.orm import selectinload
+
+    from app.db import AsyncSessionLocal
+    from app.jobs.send_digests import _render_email
+    from app.models import Subscription
+    from app.services.query import query_today
+
+    async with AsyncSessionLocal() as db:
+        stmt = (
+            select(Subscription)
+            .options(selectinload(Subscription.user), selectinload(Subscription.config))
+        )
+        if sub_id:
+            stmt = stmt.where(Subscription.id == _uuid.UUID(sub_id))
+        else:
+            stmt = stmt.where(Subscription.is_active.is_(True)).order_by(Subscription.created_at)
+        sub = (await db.scalars(stmt)).first()
+        if sub is None:
+            raise HTTPException(404, "no subscription found")
+
+        cfg = sub.config
+        user = sub.user
+        try:
+            tz = ZoneInfo(user.tz or "UTC")
+        except Exception:
+            tz = ZoneInfo("UTC")
+        today_local = datetime.now(tz=tz).date()
+        hits = await query_today(db, cfg)
+        unsubscribe_url = f"{settings.base_url.rstrip('/')}/api/subscriptions/unsubscribe/{sub.unsubscribe_token}"
+        html, _text = _render_email(
+            today=today_local.isoformat(),
+            config_name=cfg.name,
+            hits=hits,
+            send_at_local=f"{sub.send_at_local.hour:02d}:{sub.send_at_local.minute:02d}",
+            tz=user.tz or "UTC",
+            unsubscribe_url=unsubscribe_url,
+            base_url=settings.base_url.rstrip("/"),
+        )
+    return HTMLResponse(html)

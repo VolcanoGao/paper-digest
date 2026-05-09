@@ -1,0 +1,20 @@
+Paper Digest · {{ today }}
+配置: {{ config_name }}
+今日命中 {{ hits | length }} 篇{% if hits | length == 0 %}（最近 3 天没有匹配关键词的论文）{% endif %}
+
+{% for hit in hits %}
+#{{ loop.index }} {{ hit.title }}
+{% set authors = hit.authors[:5] %}{{ authors | join(', ') }}{% if hit.authors | length > 5 %} et al.{% endif %}{% if hit.affiliations %} · {{ hit.affiliations | join(' / ') }}{% endif %}
+综合 {{ '%.2f' % hit.composite }} · 创新 {{ hit.novelty }} · 实用 {{ hit.practicality }} · 严谨 {{ hit.rigor }} · 相关 {{ hit.relevance }}
+{% if hit.keywords %}关键词: {{ hit.keywords | join(' · ') }}
+{% endif %}arXiv: {{ hit.url }}
+PDF:   {{ hit.pdf_url }}
+{% if hit.summary_zh %}
+{{ hit.summary_zh }}
+{% endif %}
+---
+{% endfor %}
+
+每天 {{ send_at_local }} ({{ tz }}) 推送。
+退订: {{ unsubscribe_url }}
+管理订阅: {{ base_url }}/settings
