@@ -11,6 +11,7 @@ from app.config import ARXIV_CATEGORIES, PLATFORM_KEYWORDS, settings
 from app.jobs.scheduler import start_scheduler, stop_scheduler
 from app.pipeline.platform_run import run_platform_pipeline
 from app.routers import configs as configs_router
+from app.routers import pages as pages_router
 from app.routers import subscriptions as subs_router
 from app.schemas import UserCreate, UserRead, UserUpdate
 
@@ -53,10 +54,15 @@ app.include_router(
 )
 
 
-# --- Domain routes ---
+# --- Domain routes (JSON API) ---
 
 app.include_router(configs_router.router)
 app.include_router(subs_router.router)
+
+
+# --- HTML pages ---
+
+app.include_router(pages_router.router)
 
 
 # --- Misc ---

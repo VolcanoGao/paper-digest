@@ -1,0 +1,44 @@
+{% macro paper_card(hit, index) %}
+<article class="bg-white border border-slate-200 rounded-lg p-5 mb-4">
+  <div class="flex items-start gap-3">
+    <span class="text-xs text-slate-400 font-mono mt-1">#{{ index }}</span>
+    <div class="flex-1 min-w-0">
+      <h2 class="text-base font-semibold text-slate-900 leading-snug">
+        {{ hit.title }}
+      </h2>
+      <div class="mt-1.5 text-xs text-slate-500 flex flex-wrap gap-x-3 gap-y-1">
+        <span>
+          {% set authors = hit.authors[:5] %}
+          {{ authors | join(', ') }}{% if hit.authors | length > 5 %} et al.{% endif %}
+        </span>
+        {% if hit.affiliations %}
+          <span class="text-slate-700">{{ hit.affiliations | join(' / ') }}</span>
+        {% endif %}
+        <span class="font-mono">{{ hit.published_at.strftime('%Y-%m-%d') }}</span>
+        <a href="{{ hit.url }}" target="_blank" rel="noopener" class="text-slate-500 hover:text-slate-900 underline">arXiv</a>
+        <a href="{{ hit.pdf_url }}" target="_blank" rel="noopener" class="text-slate-500 hover:text-slate-900 underline">PDF</a>
+      </div>
+
+      <div class="mt-2 text-xs flex flex-wrap items-center gap-3">
+        <span class="px-2 py-0.5 rounded bg-slate-900 text-white font-mono">综合 {{ '%.2f' % hit.composite }}</span>
+        <span class="text-slate-500">创新 <span class="text-slate-900">{{ hit.novelty }}</span></span>
+        <span class="text-slate-500">实用 <span class="text-slate-900">{{ hit.practicality }}</span></span>
+        <span class="text-slate-500">严谨 <span class="text-slate-900">{{ hit.rigor }}</span></span>
+        <span class="text-slate-500">相关 <span class="text-slate-900">{{ hit.relevance }}</span></span>
+      </div>
+
+      {% if hit.keywords %}
+        <div class="mt-2 flex flex-wrap gap-1.5">
+          {% for kw in hit.keywords %}
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-slate-100 text-slate-700 border border-slate-200">{{ kw }}</span>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      {% if hit.summary_zh %}
+        <p class="mt-3 text-sm text-slate-700 leading-relaxed">{{ hit.summary_zh }}</p>
+      {% endif %}
+    </div>
+  </div>
+</article>
+{% endmacro %}

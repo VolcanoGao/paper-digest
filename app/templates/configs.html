@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Configs · Paper Digest{% endblock %}
+{% block content %}
+
+<div class="flex items-center justify-between mb-5">
+  <h1 class="text-xl font-semibold text-slate-900">Configs</h1>
+  <form method="post" action="/configs/new" class="flex items-center gap-2">
+    <input type="text" name="name" required maxlength="120" placeholder="新配置名称（如 LLM4Rec）"
+           class="px-3 py-1.5 rounded-md border border-slate-300 text-sm focus:outline-none focus:ring-1 focus:ring-slate-900">
+    <button class="px-3 py-1.5 rounded-md bg-slate-900 text-white text-sm font-medium hover:bg-slate-700">
+      新建
+    </button>
+  </form>
+</div>
+
+{% if configs | length == 0 %}
+  <div class="bg-white border border-slate-200 rounded-lg p-6 text-center text-sm text-slate-500">
+    还没有配置。新建一个开始。
+  </div>
+{% endif %}
+
+{% for entry in configs %}
+  {% set c = entry.cfg %}
+  <form method="post" action="/configs/{{ c.id }}/save"
+        class="bg-white border border-slate-200 rounded-lg p-5 mb-4 space-y-4">
+    <div class="flex items-center justify-between gap-4">
+      <input type="text" name="name" value="{{ c.name }}" maxlength="120" required
+             class="text-base font-semibold text-slate-900 bg-transparent border-b border-slate-200 focus:outline-none focus:border-slate-900 flex-1">
+      <label class="flex items-center gap-1.5 text-xs text-slate-600 whitespace-nowrap">
+        <input type="checkbox" name="is_default" {% if c.is_default %}checked{% endif %}>
+        设为默认
+      </label>
+    </div>
+
+    <div>
+      <label class="block text-xs text-slate-500 mb-1">关键词（每行一个或逗号分隔）</label>
+      <textarea name="keywords_raw" rows="3"
+                class="w-full px-3 py-2 rounded-md border border-slate-300 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-slate-900"
+                placeholder="recommend&#10;ranking&#10;LLM4Rec">{{ c.keywords | join('\n') }}</textarea>
+      {% if entry.kw_status %}
+        <div class="mt-2 flex flex-wrap gap-1.5 text-xs">
+          {% for s in entry.kw_status %}
+            {% if s.monitored %}
+              <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200">
+                {{ s.text }}
+              </span>
+            {% else %}
+              <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-yellow-50 text-yellow-800 border border-yellow-200" title="平台暂未监控该关键词，可能没有结果">
+                ⚠ {{ s.text }}
+              </span>
+            {% endif %}
+          {% endfor %}
+        </div>
+        <p class="text-xs text-slate-400 mt-1">绿色 = 平台监控中；黄色 = 平台暂未监控（需联系管理员添加）</p>
+      {% endif %}
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div>
+        <label class="block text-xs text-slate-500 mb-1">Top N</label>
+        <input type="number" name="top_n" value="{{ c.top_n }}" min="1" max="50" required
+               class="w-full px-2 py-1 rounded-md border border-slate-300 text-sm">
+      </div>
+      {% set wpairs = [
+        ('weight_novelty',     '创新',  c.weights.novelty),
+        ('weight_practicality','实用',  c.weights.practicality),
+        ('weight_rigor',       '严谨',  c.weights.rigor),
+        ('weight_relevance',   '相关',  c.weights.relevance),
+      ] %}
+      {% for wname, label, val in wpairs %}
+        <div>
+          <label class="block text-xs text-slate-500 mb-1">
+            {{ label }} <span class="font-mono text-slate-700" id="lbl-{{ c.id }}-{{ wname }}">{{ '%.2f' % val }}</span>
+          </label>
+          <input type="range" name="{{ wname }}" min="0" max="1" step="0.05" value="{{ val }}"
+                 oninput="document.getElementById('lbl-{{ c.id }}-{{ wname }}').textContent = parseFloat(this.value).toFixed(2)"
+                 class="w-full">
+        </div>
+      {% endfor %}
+    </div>
+
+    <div class="flex items-center justify-between pt-2 border-t border-slate-100">
+      <button class="px-3 py-1.5 rounded-md bg-slate-900 text-white text-sm font-medium hover:bg-slate-700">
+        保存
+      </button>
+      <button type="submit" formaction="/configs/{{ c.id }}/delete" formmethod="post"
+              onclick="return confirm('删除配置 {{ c.name }}？关联的订阅也会被删除。')"
+              class="text-sm text-red-600 hover:text-red-700">
+        删除
+      </button>
+    </div>
+  </form>
+{% endfor %}
+
+{% endblock %}

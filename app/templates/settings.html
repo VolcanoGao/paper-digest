@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}Settings · Paper Digest{% endblock %}
+{% block content %}
+
+<h1 class="text-xl font-semibold text-slate-900 mb-5">Settings</h1>
+
+<div class="bg-white border border-slate-200 rounded-lg p-5 mb-4">
+  <h2 class="text-sm font-semibold text-slate-900 mb-3">个人</h2>
+  <form method="post" action="/settings/profile" class="space-y-3">
+    <div>
+      <label class="block text-xs text-slate-500 mb-1">邮箱</label>
+      <div class="text-sm text-slate-700">{{ user.email }}</div>
+    </div>
+    <div>
+      <label class="block text-xs text-slate-500 mb-1">时区</label>
+      <select name="tz" class="w-full md:w-64 px-3 py-1.5 rounded-md border border-slate-300 text-sm">
+        {% set tzs = ['Asia/Shanghai', 'Asia/Tokyo', 'UTC', 'America/Los_Angeles', 'America/New_York', 'Europe/London'] %}
+        {% if user.tz not in tzs %}
+          <option value="{{ user.tz }}" selected>{{ user.tz }}</option>
+        {% endif %}
+        {% for t in tzs %}
+          <option value="{{ t }}" {% if t == user.tz %}selected{% endif %}>{{ t }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button class="px-3 py-1.5 rounded-md bg-slate-900 text-white text-sm font-medium hover:bg-slate-700">保存</button>
+  </form>
+</div>
+
+<div class="bg-white border border-slate-200 rounded-lg p-5 mb-4">
+  <h2 class="text-sm font-semibold text-slate-900 mb-1">DeepSeek API Key（v2 启用，可先存）</h2>
+  <p class="text-xs text-slate-500 mb-3">
+    {% if has_deepseek_key %}已保存（加密存储）。重新填写会覆盖。{% else %}尚未保存。{% endif %}
+    <span class="text-slate-400">第一版只用平台 key，自带 key 在 v2 解锁「扩展抓取/自定义评估」。</span>
+  </p>
+  <form method="post" action="/settings/deepseek-key" class="space-y-3">
+    <input type="password" name="deepseek_key" placeholder="sk-..."
+           class="w-full px-3 py-1.5 rounded-md border border-slate-300 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-slate-900">
+    <div class="flex items-center gap-2">
+      <button class="px-3 py-1.5 rounded-md bg-slate-900 text-white text-sm font-medium hover:bg-slate-700">保存</button>
+      {% if has_deepseek_key %}
+        <button type="submit" name="clear" value="1"
+                onclick="return confirm('清除已保存的 DeepSeek key？')"
+                class="px-3 py-1.5 rounded-md bg-white text-red-600 border border-red-200 text-sm hover:bg-red-50">
+          清除
+        </button>
+      {% endif %}
+    </div>
+  </form>
+</div>
+
+<div class="bg-white border border-slate-200 rounded-lg p-5">
+  <h2 class="text-sm font-semibold text-slate-900 mb-3">订阅推送</h2>
+
+  {% if subs | length == 0 %}
+    <p class="text-xs text-slate-500 mb-3">还没有订阅。新建一个，按设定时间通过邮件收到精选论文。</p>
+  {% else %}
+    <div class="divide-y divide-slate-100 mb-4">
+      {% for entry in subs %}
+        <div class="flex items-center justify-between py-2 text-sm">
+          <div>
+            <div class="text-slate-900">{{ entry.config.name if entry.config else '(已删除配置)' }}</div>
+            <div class="text-xs text-slate-500">
+              每天 {{ '%02d:%02d' % (entry.sub.send_at_local.hour, entry.sub.send_at_local.minute) }}
+              ({{ user.tz }}) ·
+              {% if entry.sub.is_active %}
+                <span class="text-green-700">活跃</span>
+              {% else %}
+                <span class="text-slate-400">已退订</span>
+              {% endif %}
+            </div>
+          </div>
+          <form method="post" action="/settings/subscriptions/{{ entry.sub.id }}/delete">
+            <button onclick="return confirm('删除该订阅？')"
+                    class="text-xs text-red-600 hover:text-red-700">删除</button>
+          </form>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  {% if configs | length == 0 %}
+    <p class="text-xs text-slate-500">先去 <a href="/configs" class="text-slate-900 underline">Configs</a> 创建一个配置才能订阅。</p>
+  {% else %}
+    <form method="post" action="/settings/subscriptions/new" class="flex flex-wrap items-end gap-3">
+      <div class="min-w-0 flex-1">
+        <label class="block text-xs text-slate-500 mb-1">配置</label>
+        <select name="config_id" class="w-full px-3 py-1.5 rounded-md border border-slate-300 text-sm">
+          {% for c in configs %}
+            <option value="{{ c.id }}">{{ c.name }}{% if c.is_default %} (默认){% endif %}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs text-slate-500 mb-1">发送时间（本地）</label>
+        <input type="time" name="send_at_local" value="08:00" required
+               class="px-3 py-1.5 rounded-md border border-slate-300 text-sm">
+      </div>
+      <button class="px-3 py-1.5 rounded-md bg-slate-900 text-white text-sm font-medium hover:bg-slate-700">
+        新建订阅
+      </button>
+    </form>
+  {% endif %}
+</div>
+
+{% endblock %}

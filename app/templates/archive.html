@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% from "partials/paper_card.html" import paper_card %}
+{% block title %}Archive · Paper Digest{% endblock %}
+{% block content %}
+
+<div class="flex items-center justify-between mb-5">
+  <div>
+    <h1 class="text-xl font-semibold text-slate-900">Archive</h1>
+    {% if cfg %}
+      <p class="text-xs text-slate-500 mt-1">配置: {{ cfg.name }}</p>
+    {% endif %}
+  </div>
+  <form method="get" action="/archive" class="flex items-center gap-2 text-sm">
+    {% if cfg %}<input type="hidden" name="config_id" value="{{ cfg.id }}">{% endif %}
+    <label class="text-slate-500">日期</label>
+    <input type="date" name="date" value="{{ target_day.isoformat() }}"
+           onchange="this.form.submit()"
+           class="px-2 py-1 rounded-md border border-slate-300 text-sm">
+  </form>
+</div>
+
+{% if configs and configs | length > 1 %}
+  <div class="mb-4">
+    {% include "partials/config_picker.html" with context %}
+  </div>
+{% endif %}
+
+{% if hits | length == 0 %}
+  <div class="bg-white border border-slate-200 rounded-lg p-6 text-center text-sm text-slate-500">
+    {{ target_day.isoformat() }} 没有命中关键词的论文。
+  </div>
+{% else %}
+  <p class="text-xs text-slate-500 mb-3">{{ target_day.isoformat() }} · 命中 {{ hits | length }} 篇</p>
+  {% for hit in hits %}
+    {{ paper_card(hit, loop.index) }}
+  {% endfor %}
+{% endif %}
+
+{% endblock %}
