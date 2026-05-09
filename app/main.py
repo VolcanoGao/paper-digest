@@ -6,9 +6,13 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.concurrency import run_in_threadpool
 
+from app.auth import auth_backend, fastapi_users
 from app.config import ARXIV_CATEGORIES, PLATFORM_KEYWORDS, settings
 from app.jobs.scheduler import start_scheduler, stop_scheduler
 from app.pipeline.platform_run import run_platform_pipeline
+from app.routers import configs as configs_router
+from app.routers import subscriptions as subs_router
+from app.schemas import UserCreate, UserRead, UserUpdate
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s"
@@ -30,6 +34,34 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Paper Digest", lifespan=lifespan)
 
 
+# --- Auth routes (fastapi-users) ---
+
+app.include_router(
+    fastapi_users.get_auth_router(auth_backend),
+    prefix="/auth",
+    tags=["auth"],
+)
+app.include_router(
+    fastapi_users.get_register_router(UserRead, UserCreate),
+    prefix="/auth",
+    tags=["auth"],
+)
+app.include_router(
+    fastapi_users.get_users_router(UserRead, UserUpdate),
+    prefix="/users",
+    tags=["users"],
+)
+
+
+# --- Domain routes ---
+
+app.include_router(configs_router.router)
+app.include_router(subs_router.router)
+
+
+# --- Misc ---
+
+
 @app.get("/healthz")
 def healthz() -> dict:
     return {
@@ -43,9 +75,6 @@ def healthz() -> dict:
 
 @app.post("/admin/run-now")
 async def admin_run_now() -> dict:
-    """Trigger the platform pipeline synchronously. Phase-1 admin endpoint:
-    no auth yet — disable in prod or move behind admin token before exposing.
-    """
     if settings.app_env == "prod":
         raise HTTPException(status_code=403, detail="disabled in prod")
     stats = await run_in_threadpool(run_platform_pipeline)
